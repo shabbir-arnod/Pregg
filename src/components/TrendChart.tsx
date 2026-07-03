@@ -53,6 +53,7 @@ export function TrendChart({ data, series, unit, height = 260 }: TrendChartProps
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
             connectNulls
+            isAnimationActive={false}
           />
         ))}
       </LineChart>
