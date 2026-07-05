@@ -10,7 +10,7 @@ export function getGestationDays(dueDate: string, today: Date = new Date()): num
 
 export function getPregnancyWeek(dueDate: string, today: Date = new Date()): number {
   const days = getGestationDays(dueDate, today);
-  return Math.min(42, Math.max(1, Math.floor(days / 7) + 1));
+  return Math.min(42, Math.max(1, Math.floor(days / 7)));
 }
 
 export function getTrimester(week: number): 1 | 2 | 3 {
