@@ -70,6 +70,55 @@ export function getBabySize(week: number): string {
   return BABY_SIZE_BY_WEEK[clamped] ?? BABY_SIZE_BY_WEEK[4];
 }
 
+// Closest available emoji per week — some are approximations where no exact
+// match exists (e.g. no "fig" or "rutabaga" emoji).
+const BABY_EMOJI_BY_WEEK: Record<number, string> = {
+  4: '🟤',
+  5: '🟤',
+  6: '🫘',
+  7: '🫐',
+  8: '🍓',
+  9: '🍇',
+  10: '🍊',
+  11: '🟣',
+  12: '🍋',
+  13: '🍋',
+  14: '🍑',
+  15: '🍎',
+  16: '🥑',
+  17: '🥔',
+  18: '🫑',
+  19: '🥭',
+  20: '🍌',
+  21: '🥕',
+  22: '🍈',
+  23: '🍊',
+  24: '🍈',
+  25: '🥦',
+  26: '🥬',
+  27: '🥔',
+  28: '🍆',
+  29: '🎃',
+  30: '🥬',
+  31: '🥥',
+  32: '🥔',
+  33: '🍍',
+  34: '🍈',
+  35: '🍈',
+  36: '🥬',
+  37: '🥬',
+  38: '🧅',
+  39: '🍉',
+  40: '🎃',
+  41: '🎃',
+  42: '🍉',
+};
+
+export function getBabyEmoji(week: number): string {
+  const clamped = Math.min(42, Math.max(4, week));
+  return BABY_EMOJI_BY_WEEK[clamped] ?? BABY_EMOJI_BY_WEEK[4];
+}
+
 export const SYMPTOM_LABELS: Record<SymptomKey, string> = {
   nausea: 'Nausea',
   fatigue: 'Fatigue',

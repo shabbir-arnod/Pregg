@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Activity, Baby as BabyIcon, CalendarHeart, Smile, Square, Trash2 } from 'lucide-react';
 import { useKickSessions, useSettings, useSymptomLogs } from '../hooks/useAppData';
 import { formatDisplayDate, todayISO } from '../lib/date';
-import { getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester, SYMPTOM_LABELS } from '../lib/pregnancy';
+import { getBabyEmoji, getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester, SYMPTOM_LABELS } from '../lib/pregnancy';
 import { SYMPTOM_OPTIONS, type SymptomKey } from '../types';
 
 function formatDuration(totalSeconds: number): string {
@@ -17,17 +17,25 @@ function pluralize(count: number, word: string): string {
 
 function DueDateSection() {
   const { settings, updateSettings } = useSettings();
-  const [editing, setEditing] = useState(!settings.dueDate);
-  const [dueDateInput, setDueDateInput] = useState(settings.dueDate ?? '');
+  const [manualEdit, setManualEdit] = useState(false);
+  const [dueDateInput, setDueDateInput] = useState('');
+
+  // Keep the input pre-filled with whatever due date is on record, including
+  // once it arrives from the (async) settings fetch.
+  useEffect(() => {
+    if (settings.dueDate) setDueDateInput(settings.dueDate);
+  }, [settings.dueDate]);
+
+  const showForm = manualEdit || !settings.dueDate;
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!dueDateInput) return;
     updateSettings({ dueDate: dueDateInput });
-    setEditing(false);
+    setManualEdit(false);
   }
 
-  if (editing) {
+  if (showForm) {
     return (
       <section className="rounded-xl border border-rose-100 bg-white p-5">
         <h2 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
@@ -39,7 +47,7 @@ function DueDateSection() {
             required
             value={dueDateInput}
             onChange={(e) => setDueDateInput(e.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-300"
           />
           <button type="submit" className="bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium px-4 py-2 rounded-lg">
             Save
@@ -57,6 +65,14 @@ function DueDateSection() {
 
   return (
     <section className="rounded-xl border border-rose-100 bg-white p-5">
+      <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center">
+          <BabyIcon size={40} className="text-rose-400" />
+        </div>
+        <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center text-4xl">
+          {getBabyEmoji(week)}
+        </div>
+      </div>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Week {week} · Trimester {trimester}</p>
@@ -64,11 +80,17 @@ function DueDateSection() {
             Baby is about the size of {getBabySize(week)}
           </p>
           <p className="text-sm text-slate-400 mt-1">
-            {daysToGo > 0 ? `${daysToGo} days to go` : "Due date has passed — hope all is well!"} · Due{' '}
-            {formatDisplayDate(dueDate)}
+            {daysToGo > 0
+              ? `${daysToGo} days to go until your due date`
+              : 'Your due date has passed — hope all is well!'}
           </p>
+          <p className="text-xs text-slate-400">Due {formatDisplayDate(dueDate)}</p>
         </div>
-        <button type="button" onClick={() => setEditing(true)} className="text-xs text-rose-500 font-medium shrink-0">
+        <button
+          type="button"
+          onClick={() => setManualEdit(true)}
+          className="text-xs text-rose-500 font-medium shrink-0"
+        >
           Edit
         </button>
       </div>

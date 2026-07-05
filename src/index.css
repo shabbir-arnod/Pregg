@@ -13,3 +13,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* iOS Safari auto-zooms on focus when a form control's font-size is under
+   16px, then doesn't zoom back out on blur. Force 16px on small screens
+   regardless of Tailwind text-size utilities applied to these elements. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

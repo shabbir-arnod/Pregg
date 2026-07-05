@@ -3,7 +3,7 @@ import { ArrowRight, Baby, HeartPulse, ListChecks, Scale } from 'lucide-react';
 import { useBPReadings, useReminderLogs, useReminders, useSettings, useWeightReadings } from '../hooks/useAppData';
 import { TrendChart } from '../components/TrendChart';
 import { formatDisplayDate, todayISO } from '../lib/date';
-import { getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester } from '../lib/pregnancy';
+import { getBabyEmoji, getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester } from '../lib/pregnancy';
 import type { Page } from '../App';
 
 interface DashboardProps {
@@ -45,7 +45,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           onClick={() => onNavigate('baby')}
           className="w-full flex items-center gap-4 rounded-xl border border-rose-100 bg-white px-5 py-4 text-left hover:shadow-sm"
         >
-          <Baby size={26} className="text-rose-400 shrink-0" />
+          <span className="w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center text-xl shrink-0">
+            {getBabyEmoji(getPregnancyWeek(settings.dueDate))}
+          </span>
           <div className="flex-1">
             <p className="font-medium text-slate-800">
               Week {getPregnancyWeek(settings.dueDate)} · Trimester {getTrimester(getPregnancyWeek(settings.dueDate))}
