@@ -4,11 +4,12 @@ import { Dashboard } from './pages/Dashboard';
 import { Reminders } from './pages/Reminders';
 import { BloodPressure } from './pages/BloodPressure';
 import { Weight } from './pages/Weight';
+import { Baby } from './pages/Baby';
 import { Settings } from './pages/Settings';
 import { useReminderLogs, useReminders } from './hooks/useAppData';
 import { checkDueReminders } from './lib/notifications';
 
-export type Page = 'dashboard' | 'reminders' | 'bp' | 'weight' | 'settings';
+export type Page = 'dashboard' | 'reminders' | 'bp' | 'weight' | 'baby' | 'settings';
 
 function App() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -30,6 +31,7 @@ function App() {
         {page === 'reminders' && <Reminders />}
         {page === 'bp' && <BloodPressure />}
         {page === 'weight' && <Weight />}
+        {page === 'baby' && <Baby />}
         {page === 'settings' && <Settings />}
       </div>
       <div className="max-w-2xl mx-auto w-full px-4">

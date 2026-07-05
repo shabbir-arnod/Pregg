@@ -12,8 +12,11 @@ exercise reminders, blood pressure readings, and weight, with trend graphs.
   trend chart and a simple Normal/Elevated/High badge per reading.
 - **Weight tracking** — log weight entries (kg or lb) with a trend chart and
   total change since the first entry.
-- **Dashboard** — an at-a-glance home screen with today's reminders and the
-  latest BP/weight readings and mini-charts.
+- **Baby** — set a due date to see the current pregnancy week, trimester,
+  days to go, and a weekly baby-size comparison; log daily symptoms; and a
+  kick counter that keeps running even if you switch tabs mid-session.
+- **Dashboard** — an at-a-glance home screen with the current pregnancy week,
+  today's reminders, and the latest BP/weight readings and mini-charts.
 - **Backup & restore** — export all data to a JSON file and import it again,
   since everything is stored only on this device.
 

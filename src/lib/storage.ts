@@ -1,4 +1,13 @@
-import type { BPReading, Reminder, ReminderLog, Settings, WeightReading } from '../types';
+import type {
+  ActiveKickSession,
+  BPReading,
+  KickSession,
+  Reminder,
+  ReminderLog,
+  Settings,
+  SymptomLog,
+  WeightReading,
+} from '../types';
 
 const KEYS = {
   reminders: 'pregg.reminders',
@@ -6,6 +15,9 @@ const KEYS = {
   bpReadings: 'pregg.bpReadings',
   weightReadings: 'pregg.weightReadings',
   settings: 'pregg.settings',
+  symptomLogs: 'pregg.symptomLogs',
+  kickSessions: 'pregg.kickSessions',
+  activeKickSession: 'pregg.activeKickSession',
 } as const;
 
 function load<T>(key: string, fallback: T): T {
@@ -42,4 +54,13 @@ export const store = {
 
   getSettings: (): Settings => load(KEYS.settings, defaultSettings),
   setSettings: (v: Settings) => save(KEYS.settings, v),
+
+  getSymptomLogs: (): SymptomLog[] => load(KEYS.symptomLogs, []),
+  setSymptomLogs: (v: SymptomLog[]) => save(KEYS.symptomLogs, v),
+
+  getKickSessions: (): KickSession[] => load(KEYS.kickSessions, []),
+  setKickSessions: (v: KickSession[]) => save(KEYS.kickSessions, v),
+
+  getActiveKickSession: (): ActiveKickSession | null => load(KEYS.activeKickSession, null),
+  setActiveKickSession: (v: ActiveKickSession | null) => save(KEYS.activeKickSession, v),
 };

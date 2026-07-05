@@ -20,6 +20,8 @@ export function Settings() {
       bpReadings: store.getBPReadings(),
       weightReadings: store.getWeightReadings(),
       settings: store.getSettings(),
+      symptomLogs: store.getSymptomLogs(),
+      kickSessions: store.getKickSessions(),
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -46,6 +48,8 @@ export function Settings() {
         if (data.bpReadings) store.setBPReadings(data.bpReadings);
         if (data.weightReadings) store.setWeightReadings(data.weightReadings);
         if (data.settings) store.setSettings(data.settings);
+        if (data.symptomLogs) store.setSymptomLogs(data.symptomLogs);
+        if (data.kickSessions) store.setKickSessions(data.kickSessions);
         window.location.reload();
       } catch {
         alert('Could not read that file — make sure it is a Pregg backup file.');

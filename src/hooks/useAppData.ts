@@ -1,7 +1,18 @@
 import { useCallback, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { store, defaultSettings } from '../lib/storage';
-import type { BPReading, Reminder, ReminderLog, Settings, WeightReading } from '../types';
+import { todayISO } from '../lib/date';
+import type {
+  ActiveKickSession,
+  BPReading,
+  KickSession,
+  Reminder,
+  ReminderLog,
+  Settings,
+  SymptomKey,
+  SymptomLog,
+  WeightReading,
+} from '../types';
 
 export function useReminders() {
   const [reminders, setReminders] = useState<Reminder[]>(() => store.getReminders());
@@ -132,4 +143,92 @@ export function useSettings() {
   }, []);
 
   return { settings, updateSettings };
+}
+
+export function useSymptomLogs() {
+  const [logs, setLogs] = useState<SymptomLog[]>(() =>
+    store.getSymptomLogs().sort((a, b) => a.date.localeCompare(b.date)),
+  );
+
+  const persist = useCallback((next: SymptomLog[]) => {
+    const sorted = [...next].sort((a, b) => a.date.localeCompare(b.date));
+    setLogs(sorted);
+    store.setSymptomLogs(sorted);
+  }, []);
+
+  const saveForDate = useCallback(
+    (date: string, symptoms: SymptomKey[], notes?: string) => {
+      const current = store.getSymptomLogs();
+      const withoutDate = current.filter((l) => l.date !== date);
+      if (symptoms.length === 0 && !notes) {
+        persist(withoutDate);
+        return;
+      }
+      persist([...withoutDate, { id: date, date, symptoms, notes }]);
+    },
+    [persist],
+  );
+
+  const getForDate = useCallback((date: string) => logs.find((l) => l.date === date), [logs]);
+
+  return { logs, saveForDate, getForDate };
+}
+
+export function useKickSessions() {
+  const [sessions, setSessions] = useState<KickSession[]>(() =>
+    store.getKickSessions().sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
+  );
+  const [activeSession, setActiveSession] = useState<ActiveKickSession | null>(() => store.getActiveKickSession());
+
+  const persistSessions = useCallback((next: KickSession[]) => {
+    const sorted = [...next].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+    setSessions(sorted);
+    store.setKickSessions(sorted);
+  }, []);
+
+  const persistActive = useCallback((next: ActiveKickSession | null) => {
+    setActiveSession(next);
+    store.setActiveKickSession(next);
+  }, []);
+
+  const startSession = useCallback(() => {
+    persistActive({ startedAt: new Date().toISOString(), kickTimestamps: [] });
+  }, [persistActive]);
+
+  const recordKick = useCallback(() => {
+    const current = store.getActiveKickSession();
+    if (!current) return;
+    persistActive({ ...current, kickTimestamps: [...current.kickTimestamps, new Date().toISOString()] });
+  }, [persistActive]);
+
+  const endSession = useCallback(() => {
+    const current = store.getActiveKickSession();
+    if (!current) return;
+    const startedAt = new Date(current.startedAt);
+    const durationSeconds = Math.max(0, Math.round((Date.now() - startedAt.getTime()) / 1000));
+    persistSessions([
+      ...store.getKickSessions(),
+      {
+        id: uuid(),
+        date: todayISO(),
+        startedAt: current.startedAt,
+        durationSeconds,
+        kickCount: current.kickTimestamps.length,
+      },
+    ]);
+    persistActive(null);
+  }, [persistSessions, persistActive]);
+
+  const discardSession = useCallback(() => {
+    persistActive(null);
+  }, [persistActive]);
+
+  const removeSession = useCallback(
+    (id: string) => {
+      persistSessions(store.getKickSessions().filter((s) => s.id !== id));
+    },
+    [persistSessions],
+  );
+
+  return { sessions, activeSession, startSession, recordKick, endSession, discardSession, removeSession };
 }

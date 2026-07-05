@@ -42,3 +42,42 @@ export interface Settings {
   dueDate?: string; // YYYY-MM-DD
   notificationsEnabled: boolean;
 }
+
+export const SYMPTOM_OPTIONS = [
+  'nausea',
+  'fatigue',
+  'headache',
+  'cramping',
+  'moodSwings',
+  'cravings',
+  'heartburn',
+  'backache',
+  'swelling',
+  'insomnia',
+  'constipation',
+  'spotting',
+] as const;
+
+export type SymptomKey = (typeof SYMPTOM_OPTIONS)[number];
+
+// One entry per day.
+export interface SymptomLog {
+  id: string; // = date
+  date: string; // YYYY-MM-DD
+  symptoms: SymptomKey[];
+  notes?: string;
+}
+
+export interface KickSession {
+  id: string;
+  date: string; // YYYY-MM-DD
+  startedAt: string; // ISO timestamp
+  durationSeconds: number;
+  kickCount: number;
+}
+
+// An in-progress kick-counting session, persisted so it survives tab switches.
+export interface ActiveKickSession {
+  startedAt: string; // ISO timestamp
+  kickTimestamps: string[]; // ISO timestamps, one per kick
+}

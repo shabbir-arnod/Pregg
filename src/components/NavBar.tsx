@@ -1,4 +1,4 @@
-import { HeartPulse, Home, ListChecks, Scale, Settings as SettingsIcon } from 'lucide-react';
+import { Baby, HeartPulse, Home, ListChecks, Scale, Settings as SettingsIcon } from 'lucide-react';
 import type { Page } from '../App';
 
 const TABS: { id: Page; label: string; icon: typeof Home }[] = [
@@ -6,6 +6,7 @@ const TABS: { id: Page; label: string; icon: typeof Home }[] = [
   { id: 'reminders', label: 'Reminders', icon: ListChecks },
   { id: 'bp', label: 'BP', icon: HeartPulse },
   { id: 'weight', label: 'Weight', icon: Scale },
+  { id: 'baby', label: 'Baby', icon: Baby },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
