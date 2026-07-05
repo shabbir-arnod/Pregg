@@ -45,31 +45,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signUp(fields: SignUpFields): Promise<AuthResult> {
-    const { data, error } = await supabase.auth.signUp({
-      email: fields.email,
-      password: fields.password,
-    });
-    if (error) return { error: error.message };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: fields.email,
+        password: fields.password,
+      });
+      if (error) return { error: error.message };
 
-    if (!data.session) {
-      return { error: null, needsEmailConfirmation: true };
+      if (!data.session) {
+        return { error: null, needsEmailConfirmation: true };
+      }
+
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user!.id,
+        first_name: fields.firstName,
+        last_name: fields.lastName,
+        phone: fields.phone || null,
+        address: fields.address || null,
+      });
+      if (profileError) return { error: profileError.message };
+
+      return { error: null };
+    } catch {
+      return { error: 'Could not reach the server. Check your connection and try again.' };
     }
-
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user!.id,
-      first_name: fields.firstName,
-      last_name: fields.lastName,
-      phone: fields.phone || null,
-      address: fields.address || null,
-    });
-    if (profileError) return { error: profileError.message };
-
-    return { error: null };
   }
 
   async function signIn(email: string, password: string): Promise<AuthResult> {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? error.message : null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error ? error.message : null };
+    } catch {
+      return { error: 'Could not reach the server. Check your connection and try again.' };
+    }
   }
 
   async function signOut() {
