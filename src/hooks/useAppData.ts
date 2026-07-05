@@ -1,7 +1,17 @@
-import { useCallback, useState } from 'react';
-import { v4 as uuid } from 'uuid';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
+import { supabase } from '../lib/supabaseClient';
 import { store, defaultSettings } from '../lib/storage';
 import { todayISO } from '../lib/date';
+import {
+  bpReadingFromRow,
+  kickSessionFromRow,
+  reminderFromRow,
+  reminderLogFromRow,
+  settingsFromRow,
+  symptomLogFromRow,
+  weightReadingFromRow,
+} from '../lib/dbMappers';
 import type {
   ActiveKickSession,
   BPReading,
@@ -14,159 +24,294 @@ import type {
   WeightReading,
 } from '../types';
 
-export function useReminders() {
-  const [reminders, setReminders] = useState<Reminder[]>(() => store.getReminders());
+function useUserId(): string | undefined {
+  const { session } = useAuth();
+  return session?.user.id;
+}
 
-  const persist = useCallback((next: Reminder[]) => {
-    setReminders(next);
-    store.setReminders(next);
-  }, []);
+export function useReminders() {
+  const userId = useUserId();
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+
+  useEffect(() => {
+    if (!userId) {
+      setReminders([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('reminders')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!cancelled && data) setReminders(data.map(reminderFromRow));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const addReminder = useCallback(
-    (data: Omit<Reminder, 'id' | 'createdAt'>) => {
-      const reminder: Reminder = { ...data, id: uuid(), createdAt: new Date().toISOString() };
-      persist([...store.getReminders(), reminder]);
+    async (data: Omit<Reminder, 'id' | 'createdAt'>) => {
+      if (!userId) return;
+      const { data: row, error } = await supabase
+        .from('reminders')
+        .insert({ user_id: userId, title: data.title, type: data.type, time: data.time, days: data.days, notes: data.notes ?? null })
+        .select()
+        .single();
+      if (!error && row) setReminders((prev) => [...prev, reminderFromRow(row)]);
     },
-    [persist],
+    [userId],
   );
 
-  const updateReminder = useCallback(
-    (id: string, data: Omit<Reminder, 'id' | 'createdAt'>) => {
-      persist(store.getReminders().map((r) => (r.id === id ? { ...r, ...data } : r)));
-    },
-    [persist],
-  );
+  const updateReminder = useCallback(async (id: string, data: Omit<Reminder, 'id' | 'createdAt'>) => {
+    const { error } = await supabase
+      .from('reminders')
+      .update({ title: data.title, type: data.type, time: data.time, days: data.days, notes: data.notes ?? null })
+      .eq('id', id);
+    if (!error) setReminders((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+  }, []);
 
-  const removeReminder = useCallback(
-    (id: string) => {
-      persist(store.getReminders().filter((r) => r.id !== id));
-    },
-    [persist],
-  );
+  const removeReminder = useCallback(async (id: string) => {
+    const { error } = await supabase.from('reminders').delete().eq('id', id);
+    if (!error) setReminders((prev) => prev.filter((r) => r.id !== id));
+  }, []);
 
   return { reminders, addReminder, updateReminder, removeReminder };
 }
 
 export function useReminderLogs() {
-  const [logs, setLogs] = useState<ReminderLog[]>(() => store.getReminderLogs());
+  const userId = useUserId();
+  const [logs, setLogs] = useState<ReminderLog[]>([]);
 
-  const persist = useCallback((next: ReminderLog[]) => {
-    setLogs(next);
-    store.setReminderLogs(next);
-  }, []);
+  useEffect(() => {
+    if (!userId) {
+      setLogs([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('reminder_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!cancelled && data) setLogs(data.map(reminderLogFromRow));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const toggleDone = useCallback(
-    (reminderId: string, date: string) => {
-      const id = `${reminderId}_${date}`;
-      const current = store.getReminderLogs();
-      const exists = current.some((l) => l.id === id);
-      if (exists) {
-        persist(current.filter((l) => l.id !== id));
+    async (reminderId: string, date: string) => {
+      if (!userId) return;
+      const existing = logs.find((l) => l.reminderId === reminderId && l.date === date);
+      if (existing) {
+        const { error } = await supabase.from('reminder_logs').delete().eq('id', existing.id);
+        if (!error) setLogs((prev) => prev.filter((l) => l.id !== existing.id));
       } else {
-        persist([...current, { id, reminderId, date, completedAt: new Date().toISOString() }]);
+        const { data, error } = await supabase
+          .from('reminder_logs')
+          .insert({ user_id: userId, reminder_id: reminderId, date })
+          .select()
+          .single();
+        if (!error && data) setLogs((prev) => [...prev, reminderLogFromRow(data)]);
       }
     },
-    [persist],
+    [userId, logs],
   );
 
   const isDone = useCallback(
-    (reminderId: string, date: string) => logs.some((l) => l.id === `${reminderId}_${date}`),
+    (reminderId: string, date: string) => logs.some((l) => l.reminderId === reminderId && l.date === date),
     [logs],
   );
 
   return { logs, toggleDone, isDone };
 }
 
-export function useBPReadings() {
-  const [readings, setReadings] = useState<BPReading[]>(() =>
-    store.getBPReadings().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)),
-  );
+function sortBPReadings(readings: BPReading[]): BPReading[] {
+  return [...readings].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+}
 
-  const persist = useCallback((next: BPReading[]) => {
-    const sorted = [...next].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    setReadings(sorted);
-    store.setBPReadings(sorted);
-  }, []);
+export function useBPReadings() {
+  const userId = useUserId();
+  const [readings, setReadings] = useState<BPReading[]>([]);
+
+  useEffect(() => {
+    if (!userId) {
+      setReadings([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('bp_readings')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!cancelled && data) setReadings(sortBPReadings(data.map(bpReadingFromRow)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const addReading = useCallback(
-    (data: Omit<BPReading, 'id'>) => {
-      persist([...store.getBPReadings(), { ...data, id: uuid() }]);
+    async (data: Omit<BPReading, 'id'>) => {
+      if (!userId) return;
+      const { data: row, error } = await supabase
+        .from('bp_readings')
+        .insert({
+          user_id: userId,
+          date: data.date,
+          time: data.time,
+          systolic: data.systolic,
+          diastolic: data.diastolic,
+          pulse: data.pulse ?? null,
+          notes: data.notes ?? null,
+        })
+        .select()
+        .single();
+      if (!error && row) setReadings((prev) => sortBPReadings([...prev, bpReadingFromRow(row)]));
     },
-    [persist],
+    [userId],
   );
 
-  const removeReading = useCallback(
-    (id: string) => {
-      persist(store.getBPReadings().filter((r) => r.id !== id));
-    },
-    [persist],
-  );
+  const removeReading = useCallback(async (id: string) => {
+    const { error } = await supabase.from('bp_readings').delete().eq('id', id);
+    if (!error) setReadings((prev) => prev.filter((r) => r.id !== id));
+  }, []);
 
   return { readings, addReading, removeReading };
 }
 
-export function useWeightReadings() {
-  const [readings, setReadings] = useState<WeightReading[]>(() =>
-    store.getWeightReadings().sort((a, b) => a.date.localeCompare(b.date)),
-  );
+function sortWeightReadings(readings: WeightReading[]): WeightReading[] {
+  return [...readings].sort((a, b) => a.date.localeCompare(b.date));
+}
 
-  const persist = useCallback((next: WeightReading[]) => {
-    const sorted = [...next].sort((a, b) => a.date.localeCompare(b.date));
-    setReadings(sorted);
-    store.setWeightReadings(sorted);
-  }, []);
+export function useWeightReadings() {
+  const userId = useUserId();
+  const [readings, setReadings] = useState<WeightReading[]>([]);
+
+  useEffect(() => {
+    if (!userId) {
+      setReadings([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('weight_readings')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!cancelled && data) setReadings(sortWeightReadings(data.map(weightReadingFromRow)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const addReading = useCallback(
-    (data: Omit<WeightReading, 'id'>) => {
-      persist([...store.getWeightReadings(), { ...data, id: uuid() }]);
+    async (data: Omit<WeightReading, 'id'>) => {
+      if (!userId) return;
+      const { data: row, error } = await supabase
+        .from('weight_readings')
+        .insert({ user_id: userId, date: data.date, weight: data.weight, notes: data.notes ?? null })
+        .select()
+        .single();
+      if (!error && row) setReadings((prev) => sortWeightReadings([...prev, weightReadingFromRow(row)]));
     },
-    [persist],
+    [userId],
   );
 
-  const removeReading = useCallback(
-    (id: string) => {
-      persist(store.getWeightReadings().filter((r) => r.id !== id));
-    },
-    [persist],
-  );
+  const removeReading = useCallback(async (id: string) => {
+    const { error } = await supabase.from('weight_readings').delete().eq('id', id);
+    if (!error) setReadings((prev) => prev.filter((r) => r.id !== id));
+  }, []);
 
   return { readings, addReading, removeReading };
 }
 
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(() => store.getSettings());
+  const userId = useUserId();
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
 
-  const updateSettings = useCallback((data: Partial<Settings>) => {
-    const next = { ...defaultSettings, ...store.getSettings(), ...data };
-    setSettings(next);
-    store.setSettings(next);
-  }, []);
+  useEffect(() => {
+    if (!userId) {
+      setSettings(defaultSettings);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('settings')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setSettings(settingsFromRow(data));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const updateSettings = useCallback(
+    async (data: Partial<Settings>) => {
+      if (!userId) return;
+      const next = { ...defaultSettings, ...settings, ...data };
+      setSettings(next);
+      await supabase.from('settings').upsert({
+        user_id: userId,
+        weight_unit: next.weightUnit,
+        due_date: next.dueDate ?? null,
+        notifications_enabled: next.notificationsEnabled,
+      });
+    },
+    [userId, settings],
+  );
 
   return { settings, updateSettings };
 }
 
 export function useSymptomLogs() {
-  const [logs, setLogs] = useState<SymptomLog[]>(() =>
-    store.getSymptomLogs().sort((a, b) => a.date.localeCompare(b.date)),
-  );
+  const userId = useUserId();
+  const [logs, setLogs] = useState<SymptomLog[]>([]);
 
-  const persist = useCallback((next: SymptomLog[]) => {
-    const sorted = [...next].sort((a, b) => a.date.localeCompare(b.date));
-    setLogs(sorted);
-    store.setSymptomLogs(sorted);
-  }, []);
+  useEffect(() => {
+    if (!userId) {
+      setLogs([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('symptom_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!cancelled && data) setLogs(data.map(symptomLogFromRow).sort((a, b) => a.date.localeCompare(b.date)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const saveForDate = useCallback(
-    (date: string, symptoms: SymptomKey[], notes?: string) => {
-      const current = store.getSymptomLogs();
-      const withoutDate = current.filter((l) => l.date !== date);
+    async (date: string, symptoms: SymptomKey[], notes?: string) => {
+      if (!userId) return;
       if (symptoms.length === 0 && !notes) {
-        persist(withoutDate);
+        const { error } = await supabase.from('symptom_logs').delete().eq('user_id', userId).eq('date', date);
+        if (!error) setLogs((prev) => prev.filter((l) => l.date !== date));
         return;
       }
-      persist([...withoutDate, { id: date, date, symptoms, notes }]);
+      const { data, error } = await supabase
+        .from('symptom_logs')
+        .upsert({ user_id: userId, date, symptoms, notes: notes ?? null }, { onConflict: 'user_id,date' })
+        .select()
+        .single();
+      if (!error && data) {
+        setLogs((prev) => [...prev.filter((l) => l.date !== date), symptomLogFromRow(data)].sort((a, b) => a.date.localeCompare(b.date)));
+      }
     },
-    [persist],
+    [userId],
   );
 
   const getForDate = useCallback((date: string) => logs.find((l) => l.date === date), [logs]);
@@ -175,16 +320,27 @@ export function useSymptomLogs() {
 }
 
 export function useKickSessions() {
-  const [sessions, setSessions] = useState<KickSession[]>(() =>
-    store.getKickSessions().sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
-  );
+  const userId = useUserId();
+  const [sessions, setSessions] = useState<KickSession[]>([]);
   const [activeSession, setActiveSession] = useState<ActiveKickSession | null>(() => store.getActiveKickSession());
 
-  const persistSessions = useCallback((next: KickSession[]) => {
-    const sorted = [...next].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-    setSessions(sorted);
-    store.setKickSessions(sorted);
-  }, []);
+  useEffect(() => {
+    if (!userId) {
+      setSessions([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('kick_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!cancelled && data) setSessions(data.map(kickSessionFromRow).sort((a, b) => a.startedAt.localeCompare(b.startedAt)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const persistActive = useCallback((next: ActiveKickSession | null) => {
     setActiveSession(next);
@@ -196,39 +352,39 @@ export function useKickSessions() {
   }, [persistActive]);
 
   const recordKick = useCallback(() => {
-    const current = store.getActiveKickSession();
-    if (!current) return;
-    persistActive({ ...current, kickTimestamps: [...current.kickTimestamps, new Date().toISOString()] });
-  }, [persistActive]);
+    setActiveSession((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, kickTimestamps: [...prev.kickTimestamps, new Date().toISOString()] };
+      store.setActiveKickSession(next);
+      return next;
+    });
+  }, []);
 
-  const endSession = useCallback(() => {
-    const current = store.getActiveKickSession();
-    if (!current) return;
-    const startedAt = new Date(current.startedAt);
+  const endSession = useCallback(async () => {
+    if (!activeSession || !userId) return;
+    const startedAt = new Date(activeSession.startedAt);
     const durationSeconds = Math.max(0, Math.round((Date.now() - startedAt.getTime()) / 1000));
-    persistSessions([
-      ...store.getKickSessions(),
-      {
-        id: uuid(),
+    const { data, error } = await supabase
+      .from('kick_sessions')
+      .insert({
+        user_id: userId,
         date: todayISO(),
-        startedAt: current.startedAt,
-        durationSeconds,
-        kickCount: current.kickTimestamps.length,
-      },
-    ]);
+        started_at: activeSession.startedAt,
+        duration_seconds: durationSeconds,
+        kick_count: activeSession.kickTimestamps.length,
+      })
+      .select()
+      .single();
+    if (!error && data) setSessions((prev) => [...prev, kickSessionFromRow(data)]);
     persistActive(null);
-  }, [persistSessions, persistActive]);
+  }, [activeSession, userId, persistActive]);
 
-  const discardSession = useCallback(() => {
-    persistActive(null);
-  }, [persistActive]);
+  const discardSession = useCallback(() => persistActive(null), [persistActive]);
 
-  const removeSession = useCallback(
-    (id: string) => {
-      persistSessions(store.getKickSessions().filter((s) => s.id !== id));
-    },
-    [persistSessions],
-  );
+  const removeSession = useCallback(async (id: string) => {
+    const { error } = await supabase.from('kick_sessions').delete().eq('id', id);
+    if (!error) setSessions((prev) => prev.filter((s) => s.id !== id));
+  }, []);
 
   return { sessions, activeSession, startSession, recordKick, endSession, discardSession, removeSession };
 }

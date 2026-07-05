@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { HeartPulse } from 'lucide-react';
 import { NavBar } from './components/NavBar';
 import { Dashboard } from './pages/Dashboard';
 import { Reminders } from './pages/Reminders';
@@ -6,12 +7,14 @@ import { BloodPressure } from './pages/BloodPressure';
 import { Weight } from './pages/Weight';
 import { Baby } from './pages/Baby';
 import { Settings } from './pages/Settings';
+import { Auth } from './pages/Auth';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useReminderLogs, useReminders } from './hooks/useAppData';
 import { checkDueReminders } from './lib/notifications';
 
 export type Page = 'dashboard' | 'reminders' | 'bp' | 'weight' | 'baby' | 'settings';
 
-function App() {
+function AuthedApp() {
   const [page, setPage] = useState<Page>('dashboard');
   const { reminders } = useReminders();
   const { isDone } = useReminderLogs();
@@ -38,6 +41,28 @@ function App() {
         <NavBar active={page} onChange={setPage} />
       </div>
     </div>
+  );
+}
+
+function Gate() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-svh flex items-center justify-center bg-rose-50/40">
+        <HeartPulse size={32} className="text-rose-300 animate-pulse" />
+      </div>
+    );
+  }
+
+  return session ? <AuthedApp /> : <Auth />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   );
 }
 

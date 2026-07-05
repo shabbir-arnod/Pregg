@@ -1,10 +1,13 @@
 # Pregg — Pregnancy Health Tracker
 
-A simple, private web app for tracking a pregnancy day-to-day: medicine and
-exercise reminders, blood pressure readings, and weight, with trend graphs.
+A private web app for tracking a pregnancy day-to-day: medicine and exercise
+reminders, blood pressure and weight readings with trend graphs, a pregnancy
+week/baby-size tracker, a symptom log, and a kick counter.
 
 ## Features
 
+- **Accounts** — sign up with email/password (plus first/last name, contact
+  number, and address), or sign in on any device to see the same data.
 - **Reminders** — schedule medicine or exercise reminders with a time and
   repeat days, check them off for the day, and get a browser notification
   when one is due (while the app is open).
@@ -17,11 +20,36 @@ exercise reminders, blood pressure readings, and weight, with trend graphs.
   kick counter that keeps running even if you switch tabs mid-session.
 - **Dashboard** — an at-a-glance home screen with the current pregnancy week,
   today's reminders, and the latest BP/weight readings and mini-charts.
-- **Backup & restore** — export all data to a JSON file and import it again,
-  since everything is stored only on this device.
+- **Backup & restore** — export all of your account's data to a JSON file
+  and import it again (e.g. into a fresh account).
 
-All data stays in the browser's local storage on the device you use — there
-is no server or account, so nothing is uploaded anywhere.
+Data is stored in a Supabase (Postgres) project scoped to each account via
+Row Level Security — no one but the account owner can read or write their
+rows.
+
+## Setting up accounts (Supabase)
+
+The app needs a Supabase project to store accounts and data:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the SQL Editor, paste and run [`supabase/schema.sql`](supabase/schema.sql)
+   from this repo — it creates all the tables and their access policies.
+3. Under **Authentication → Providers → Email**, turn **off** "Confirm
+   email" (this is a private app for the two of you, so there's no need for
+   email verification — leaving it on means new accounts won't be signed in
+   until they click an emailed link).
+4. Under **Project Settings → API**, copy the **Project URL** and the
+   **anon public** key (never the `service_role` key — that one's secret).
+5. Create a `.env` file in the project root (see `.env.example`) with:
+   ```
+   VITE_SUPABASE_URL=your-project-url
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
+6. For the deployed site, add the same two variables under the Vercel
+   project's **Settings → Environment Variables**, then redeploy.
+
+Without these set, the app shows a "not connected to a backend yet" screen
+instead of the sign-in form.
 
 ## Getting started
 
@@ -40,7 +68,7 @@ npm run preview   # optional: preview the production build locally
 ```
 
 The build output is a static site in `dist/` that can be deployed to any
-static host (Vercel, Netlify, GitHub Pages, etc.) — no backend required.
+static host (Vercel, Netlify, GitHub Pages, etc.).
 
 ### Installing as an app
 
@@ -57,5 +85,5 @@ in a tab, or rely on the in-app "Today" checklist when you open it.
 
 ## Tech stack
 
-React, TypeScript, Vite, Tailwind CSS, and Recharts. No backend — state is
-persisted with `localStorage`.
+React, TypeScript, Vite, Tailwind CSS, Recharts, and Supabase (Postgres +
+Auth).
