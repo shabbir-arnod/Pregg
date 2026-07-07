@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { v4 as uuid } from 'uuid';
 import { useAuth } from './useAuth';
 import { supabase } from '../lib/supabaseClient';
 import { store, defaultSettings } from '../lib/storage';
 import { todayISO } from '../lib/date';
+import { resizeImage } from '../lib/image';
 import {
   bpReadingFromRow,
+  bumpPhotoFromRow,
   kickSessionFromRow,
   reminderFromRow,
   reminderLogFromRow,
@@ -15,6 +18,7 @@ import {
 import type {
   ActiveKickSession,
   BPReading,
+  BumpPhoto,
   KickSession,
   Reminder,
   ReminderLog,
@@ -23,6 +27,8 @@ import type {
   SymptomLog,
   WeightReading,
 } from '../types';
+
+const BUMP_PHOTOS_BUCKET = 'bump-photos';
 
 function useUserId(): string | undefined {
   const { session } = useAuth();
@@ -387,4 +393,105 @@ export function useKickSessions() {
   }, []);
 
   return { sessions, activeSession, startSession, recordKick, endSession, discardSession, removeSession };
+}
+
+export interface BumpPhotoWithUrl extends BumpPhoto {
+  url: string;
+}
+
+export function useBumpPhotos() {
+  const userId = useUserId();
+  const [photos, setPhotos] = useState<BumpPhotoWithUrl[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const objectUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!userId) {
+      setPhotos([]);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.from('bump_photos').select('*').eq('user_id', userId);
+        if (cancelled) return;
+        if (error || !data) {
+          setLoading(false);
+          return;
+        }
+        const withUrls = await Promise.all(
+          data.map(async (row) => {
+            const photo = bumpPhotoFromRow(row);
+            const { data: blob } = await supabase.storage.from(BUMP_PHOTOS_BUCKET).download(photo.storagePath);
+            const url = blob ? URL.createObjectURL(blob) : '';
+            if (url) objectUrlsRef.current.push(url);
+            return { ...photo, url };
+          }),
+        );
+        if (!cancelled) {
+          setPhotos(withUrls.sort((a, b) => a.date.localeCompare(b.date)));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // Revoke every blob URL created for this hook instance when it unmounts
+  // (e.g. navigating away from the Baby tab), so they don't leak memory.
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
+    };
+  }, []);
+
+  const addPhoto = useCallback(
+    async (file: File, date: string, notes?: string): Promise<{ error: string | null }> => {
+      if (!userId) return { error: 'Not signed in.' };
+      setUploading(true);
+      try {
+        const resized = await resizeImage(file);
+        const path = `${userId}/${uuid()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from(BUMP_PHOTOS_BUCKET)
+          .upload(path, resized, { contentType: 'image/jpeg' });
+        if (uploadError) return { error: uploadError.message };
+
+        const { data: row, error } = await supabase
+          .from('bump_photos')
+          .insert({ user_id: userId, date, storage_path: path, notes: notes ?? null })
+          .select()
+          .single();
+        if (error || !row) return { error: error?.message ?? 'Could not save that photo.' };
+
+        const photo = bumpPhotoFromRow(row);
+        const url = URL.createObjectURL(resized);
+        objectUrlsRef.current.push(url);
+        setPhotos((prev) => [...prev, { ...photo, url }].sort((a, b) => a.date.localeCompare(b.date)));
+        return { error: null };
+      } catch {
+        return { error: 'Could not process or upload that photo.' };
+      } finally {
+        setUploading(false);
+      }
+    },
+    [userId],
+  );
+
+  const removePhoto = useCallback(async (photo: BumpPhotoWithUrl) => {
+    await supabase.storage.from(BUMP_PHOTOS_BUCKET).remove([photo.storagePath]);
+    const { error } = await supabase.from('bump_photos').delete().eq('id', photo.id);
+    if (!error) {
+      URL.revokeObjectURL(photo.url);
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+    }
+  }, []);
+
+  return { photos, loading, uploading, addPhoto, removePhoto };
 }

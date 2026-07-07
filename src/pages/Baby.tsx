@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Activity, Baby as BabyIcon, CalendarHeart, Smile, Square, Trash2 } from 'lucide-react';
-import { useKickSessions, useSettings, useSymptomLogs } from '../hooks/useAppData';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { parseISO } from 'date-fns';
+import { Activity, Baby as BabyIcon, Camera, CalendarHeart, ImagePlus, Smile, Square, Trash2 } from 'lucide-react';
+import { useBumpPhotos, useKickSessions, useSettings, useSymptomLogs, type BumpPhotoWithUrl } from '../hooks/useAppData';
+import { Modal } from '../components/Modal';
 import { formatDisplayDate, todayISO } from '../lib/date';
 import { getBabyEmoji, getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester, SYMPTOM_LABELS } from '../lib/pregnancy';
 import { SYMPTOM_OPTIONS, type SymptomKey } from '../types';
@@ -273,6 +275,141 @@ function KickCounterSection() {
   );
 }
 
+function weekLabel(dueDate: string | undefined, date: string): string {
+  return dueDate ? `Week ${getPregnancyWeek(dueDate, parseISO(date))}` : formatDisplayDate(date);
+}
+
+function BumpPhotosSection() {
+  const { photos, loading, uploading, addPhoto, removePhoto } = useBumpPhotos();
+  const { settings } = useSettings();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [photoDate, setPhotoDate] = useState(todayISO());
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<BumpPhotoWithUrl | null>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPendingFile(file);
+      setError(null);
+    }
+    e.target.value = '';
+  }
+
+  async function handleUpload() {
+    if (!pendingFile) return;
+    const result = await addPhoto(pendingFile, photoDate, notes.trim() || undefined);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setPendingFile(null);
+      setNotes('');
+      setPhotoDate(todayISO());
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-rose-100 bg-white p-5">
+      <h2 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+        <Camera size={16} className="text-rose-400" /> Bump photos
+      </h2>
+
+      <div className="space-y-3 mb-4">
+        <div className="flex gap-2">
+          <input
+            type="date"
+            value={photoDate}
+            onChange={(e) => setPhotoDate(e.target.value)}
+            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-300"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 border border-rose-200 text-rose-600 text-sm font-medium px-4 py-2 rounded-lg shrink-0"
+          >
+            <ImagePlus size={16} /> Choose photo
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+        </div>
+
+        {pendingFile && (
+          <div className="rounded-lg border border-rose-100 p-3 space-y-2">
+            <p className="text-sm text-slate-600 truncate">Selected: {pendingFile.name}</p>
+            <input
+              type="text"
+              placeholder="Caption (optional)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-300"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading}
+                className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:opacity-60 text-white text-sm font-medium py-2 rounded-lg"
+              >
+                {uploading ? 'Uploading…' : 'Save photo'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingFile(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 border border-slate-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-slate-400">Loading photos…</p>
+      ) : photos.length === 0 ? (
+        <p className="text-sm text-slate-400">No photos yet — add your first weekly photo above.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((photo) => (
+            <button
+              key={photo.id}
+              type="button"
+              onClick={() => setViewing(photo)}
+              className="relative aspect-square rounded-lg overflow-hidden bg-rose-50"
+            >
+              <img src={photo.url} alt={weekLabel(settings.dueDate, photo.date)} className="w-full h-full object-cover" />
+              <span className="absolute bottom-1 right-1 text-[10px] font-medium bg-black/50 text-white px-1.5 py-0.5 rounded">
+                {weekLabel(settings.dueDate, photo.date)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {viewing && (
+        <Modal title={weekLabel(settings.dueDate, viewing.date)} onClose={() => setViewing(null)}>
+          <img src={viewing.url} alt="" className="w-full rounded-lg mb-3" />
+          <p className="text-sm text-slate-500 mb-1">{formatDisplayDate(viewing.date)}</p>
+          {viewing.notes && <p className="text-sm text-slate-600 mb-3">{viewing.notes}</p>}
+          <button
+            type="button"
+            onClick={() => {
+              removePhoto(viewing);
+              setViewing(null);
+            }}
+            className="w-full flex items-center justify-center gap-1.5 border border-red-200 text-red-500 text-sm font-medium py-2 rounded-lg"
+          >
+            <Trash2 size={16} /> Delete photo
+          </button>
+        </Modal>
+      )}
+    </section>
+  );
+}
+
 export function Baby() {
   return (
     <div className="space-y-6">
@@ -280,6 +417,7 @@ export function Baby() {
         <BabyIcon size={22} className="text-rose-400" /> Baby
       </h1>
       <DueDateSection />
+      <BumpPhotosSection />
       <SymptomsSection />
       <KickCounterSection />
     </div>

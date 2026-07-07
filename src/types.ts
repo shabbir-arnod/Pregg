@@ -81,3 +81,11 @@ export interface ActiveKickSession {
   startedAt: string; // ISO timestamp
   kickTimestamps: string[]; // ISO timestamps, one per kick
 }
+
+export interface BumpPhoto {
+  id: string;
+  date: string; // YYYY-MM-DD, the day this photo represents
+  storagePath: string;
+  notes?: string;
+  createdAt: string;
+}

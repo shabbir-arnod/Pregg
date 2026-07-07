@@ -16,8 +16,9 @@ week/baby-size tracker, a symptom log, and a kick counter.
 - **Weight tracking** — log weight entries (kg or lb) with a trend chart and
   total change since the first entry.
 - **Baby** — set a due date to see the current pregnancy week, trimester,
-  days to go, and a weekly baby-size comparison; log daily symptoms; and a
-  kick counter that keeps running even if you switch tabs mid-session.
+  days to go, and a weekly baby-size comparison; log daily symptoms; a
+  kick counter that keeps running even if you switch tabs mid-session; and
+  a weekly bump-photo album, each photo labeled with the week it was taken.
 - **Dashboard** — an at-a-glance home screen with the current pregnancy week,
   today's reminders, and the latest BP/weight readings and mini-charts.
 - **Backup & restore** — export all of your account's data to a JSON file
@@ -32,8 +33,10 @@ rows.
 The app needs a Supabase project to store accounts and data:
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. In the SQL Editor, paste and run [`supabase/schema.sql`](supabase/schema.sql)
-   from this repo — it creates all the tables and their access policies.
+2. In the SQL Editor, paste and run [`supabase/schema.sql`](supabase/schema.sql),
+   then [`supabase/002_bump_photos.sql`](supabase/002_bump_photos.sql), each
+   as its own query — they create all the tables, the bump-photos storage
+   bucket, and their access policies.
 3. Under **Authentication → Providers → Email**, turn **off** "Confirm
    email" (this is a private app for the two of you, so there's no need for
    email verification — leaving it on means new accounts won't be signed in

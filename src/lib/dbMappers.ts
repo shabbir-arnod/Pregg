@@ -1,5 +1,6 @@
 import type {
   BPReading,
+  BumpPhoto,
   KickSession,
   Reminder,
   ReminderLog,
@@ -69,6 +70,16 @@ export function kickSessionFromRow(row: Record<string, unknown>): KickSession {
     startedAt: row.started_at as string,
     durationSeconds: row.duration_seconds as number,
     kickCount: row.kick_count as number,
+  };
+}
+
+export function bumpPhotoFromRow(row: Record<string, unknown>): BumpPhoto {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    storagePath: row.storage_path as string,
+    notes: (row.notes as string | null) ?? undefined,
+    createdAt: row.created_at as string,
   };
 }
 
