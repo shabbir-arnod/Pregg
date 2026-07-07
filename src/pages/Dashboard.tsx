@@ -4,6 +4,7 @@ import { useBPReadings, useReminderLogs, useReminders, useSettings, useWeightRea
 import { TrendChart } from '../components/TrendChart';
 import { formatDisplayDate, todayISO } from '../lib/date';
 import { getBabyEmoji, getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester } from '../lib/pregnancy';
+import { fromKg, roundWeight } from '../lib/units';
 import type { Page } from '../App';
 
 interface DashboardProps {
@@ -30,7 +31,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const latestWeight = weightReadings[weightReadings.length - 1];
 
   const bpChartData = useMemo(() => bpReadings.slice(-10).map((r) => ({ date: r.date, systolic: r.systolic, diastolic: r.diastolic })), [bpReadings]);
-  const weightChartData = useMemo(() => weightReadings.slice(-10).map((r) => ({ date: r.date, weight: r.weight })), [weightReadings]);
+  const weightChartData = useMemo(
+    () => weightReadings.slice(-10).map((r) => ({ date: r.date, weight: roundWeight(fromKg(r.weight, settings.weightUnit)) })),
+    [weightReadings, settings.weightUnit],
+  );
+  const latestWeightDisplay = latestWeight ? roundWeight(fromKg(latestWeight.weight, settings.weightUnit)) : null;
 
   return (
     <div className="space-y-6">
@@ -126,9 +131,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <Scale size={20} className="text-rose-400" />
             <span className="text-sm font-medium text-slate-600">Weight</span>
           </div>
-          {latestWeight ? (
+          {latestWeightDisplay !== null ? (
             <p className="text-2xl font-semibold text-slate-800">
-              {latestWeight.weight} <span className="text-xs font-normal text-slate-400">{settings.weightUnit}</span>
+              {latestWeightDisplay} <span className="text-xs font-normal text-slate-400">{settings.weightUnit}</span>
             </p>
           ) : (
             <p className="text-sm text-slate-400">No entries yet</p>

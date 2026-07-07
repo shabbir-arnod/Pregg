@@ -4,6 +4,7 @@ import { useSettings, useWeightReadings } from '../hooks/useAppData';
 import { Modal } from '../components/Modal';
 import { TrendChart } from '../components/TrendChart';
 import { formatDisplayDate, todayISO } from '../lib/date';
+import { fromKg, roundWeight, toKg } from '../lib/units';
 
 const emptyForm = { date: todayISO(), weight: '', notes: '' };
 
@@ -13,17 +14,23 @@ export function Weight() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
 
-  const chartData = useMemo(() => readings.map((r) => ({ date: r.date, weight: r.weight })), [readings]);
+  // Readings are stored in kg; convert to the currently selected unit for display.
+  const displayReadings = useMemo(
+    () => readings.map((r) => ({ ...r, weight: roundWeight(fromKg(r.weight, settings.weightUnit)) })),
+    [readings, settings.weightUnit],
+  );
 
-  const first = readings[0];
-  const latest = readings[readings.length - 1];
-  const change = readings.length > 1 && first && latest ? latest.weight - first.weight : null;
+  const chartData = useMemo(() => displayReadings.map((r) => ({ date: r.date, weight: r.weight })), [displayReadings]);
+
+  const first = displayReadings[0];
+  const latest = displayReadings[displayReadings.length - 1];
+  const change = displayReadings.length > 1 && first && latest ? roundWeight(latest.weight - first.weight) : null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const weight = Number(form.weight);
-    if (!weight) return;
-    addReading({ date: form.date, weight, notes: form.notes.trim() || undefined });
+    const weightInput = Number(form.weight);
+    if (!weightInput) return;
+    addReading({ date: form.date, weight: toKg(weightInput, settings.weightUnit), notes: form.notes.trim() || undefined });
     setForm(emptyForm);
     setModalOpen(false);
   }
@@ -89,11 +96,11 @@ export function Weight() {
 
       <section>
         <h2 className="text-sm font-medium text-slate-500 mb-2">History</h2>
-        {readings.length === 0 ? (
+        {displayReadings.length === 0 ? (
           <p className="text-sm text-slate-400">No entries yet.</p>
         ) : (
           <ul className="space-y-2">
-            {readings
+            {displayReadings
               .slice()
               .reverse()
               .map((r) => (
