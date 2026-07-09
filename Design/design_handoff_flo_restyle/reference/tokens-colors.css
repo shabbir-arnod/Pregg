@@ -1,0 +1,82 @@
+:root {
+  /* ---- Base palette — reskinned to a blush + plum duotone (Flo Health-inspired direction "1c"),
+     replacing the original rose/slate scales. Variable names kept as `rose-*`/`slate-*` so every
+     component and semantic alias below picks up the new palette without further edits. ---- */
+  --rose-50: #fdf3f6;
+  --rose-100: #f9e6ec;
+  --rose-200: #f3dbe3;
+  --rose-300: #e8c2d0;
+  --rose-400: #c46b8f;
+  --rose-500: #7c4a68;
+  --rose-600: #63384f;
+
+  --slate-50: #fdf8fa;
+  --slate-100: #f7eef1;
+  --slate-200: #ecd9e0;
+  --slate-300: #d9b8c4;
+  --slate-400: #a67e8f;
+  --slate-500: #8a6373;
+  --slate-600: #6b4a5a;
+  --slate-700: #523844;
+  --slate-800: #3d2733;
+
+  --amber-50: #fffbeb;
+  --amber-600: #d97706;
+
+  --emerald-50: #ecfdf5;
+  --emerald-100: #d1fae5;
+  --emerald-500: #10b981;
+  --emerald-600: #059669;
+
+  --red-50: #fef2f2;
+  --red-100: #fee2e2;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+
+  --sky-50: #f0f9ff;
+  --sky-600: #0284c7;
+
+  --white: #ffffff;
+  --black: #000000;
+
+  /* ---- Illustration accent — the plum→blush gradient used by the Blob motif ---- */
+  --illo-gradient: linear-gradient(135deg, var(--rose-500), var(--rose-400));
+
+  /* ---- Semantic aliases (unchanged names — now resolve to the new palette above) ---- */
+  --brand: var(--rose-500);
+  --brand-hover: var(--rose-600);
+  --brand-tint: var(--rose-100);
+  --brand-border: var(--rose-100);
+  --brand-border-strong: var(--rose-200);
+
+  --bg-app: color-mix(in srgb, var(--rose-50) 60%, white);
+  --bg-surface: var(--white);
+  --bg-overlay: rgb(0 0 0 / 0.4);
+
+  --text-heading: var(--slate-800);
+  --text-body: var(--slate-600);
+  --text-muted: var(--slate-400);
+  --text-placeholder: var(--slate-400);
+  --text-on-brand: var(--white);
+  --text-link: var(--rose-500);
+  --text-link-hover: var(--rose-600);
+
+  --border-default: var(--slate-200);
+  --border-subtle: var(--rose-100);
+  --border-dashed: var(--rose-200);
+
+  --status-normal-bg: var(--emerald-50);
+  --status-normal-fg: var(--emerald-600);
+  --status-elevated-bg: var(--amber-50);
+  --status-elevated-fg: var(--amber-600);
+  --status-high-bg: var(--red-50);
+  --status-high-fg: var(--red-500);
+  --status-info-bg: var(--sky-50);
+  --status-info-fg: var(--sky-600);
+  --status-neutral-bg: var(--slate-50);
+  --status-neutral-fg: var(--slate-500);
+
+  --danger-fg: var(--red-500);
+  --danger-bg: var(--red-50);
+  --success-fg: var(--emerald-600);
+}
