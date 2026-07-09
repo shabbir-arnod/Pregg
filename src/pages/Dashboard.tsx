@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ArrowRight, Baby, HeartPulse, ListChecks, Scale } from 'lucide-react';
 import { useBPReadings, useReminderLogs, useReminders, useSettings, useWeightReadings } from '../hooks/useAppData';
+import { Blob } from '../components/Blob';
 import { TrendChart } from '../components/TrendChart';
 import { formatDisplayDate, todayISO } from '../lib/date';
 import { getBabyEmoji, getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester } from '../lib/pregnancy';
@@ -50,9 +51,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           onClick={() => onNavigate('baby')}
           className="w-full flex items-center gap-4 rounded-xl border border-rose-100 bg-white px-5 py-4 text-left hover:shadow-sm"
         >
-          <span className="w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center text-xl shrink-0">
-            {getBabyEmoji(getPregnancyWeek(settings.dueDate))}
-          </span>
+          <Blob size={44}>{getBabyEmoji(getPregnancyWeek(settings.dueDate))}</Blob>
           <div className="flex-1">
             <p className="font-medium text-slate-800">
               Week {getPregnancyWeek(settings.dueDate)} · Trimester {getTrimester(getPregnancyWeek(settings.dueDate))}
@@ -114,7 +113,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <TrendChart
               data={bpChartData}
               series={[
-                { key: 'systolic', label: 'Systolic', color: '#ec4a7a' },
+                { key: 'systolic', label: 'Systolic', color: '#7c4a68' },
                 { key: 'diastolic', label: 'Diastolic', color: '#8b5cf6' },
               ]}
               height={120}
@@ -139,7 +138,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <p className="text-sm text-slate-400">No entries yet</p>
           )}
           <div className="mt-3">
-            <TrendChart data={weightChartData} series={[{ key: 'weight', label: 'Weight', color: '#ec4a7a' }]} height={120} />
+            <TrendChart data={weightChartData} series={[{ key: 'weight', label: 'Weight', color: '#7c4a68' }]} height={120} />
           </div>
         </button>
       </div>

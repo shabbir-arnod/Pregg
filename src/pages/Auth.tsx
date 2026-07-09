@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { HeartPulse } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { Blob } from '../components/Blob';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const emptySignUpForm = { email: '', password: '', firstName: '', lastName: '', phone: '', address: '' };
@@ -18,7 +19,9 @@ export function Auth() {
     return (
       <div className="min-h-svh flex items-center justify-center bg-rose-50/40 px-4">
         <div className="max-w-sm text-center space-y-2">
-          <HeartPulse size={32} className="text-rose-400 mx-auto" />
+          <Blob size={56} className="mx-auto">
+            <HeartPulse size={26} />
+          </Blob>
           <h1 className="text-lg font-semibold text-slate-800">Pregg isn't connected to a backend yet</h1>
           <p className="text-sm text-slate-500">
             Accounts need a Supabase project to store data. Add <code>VITE_SUPABASE_URL</code> and{' '}
@@ -62,7 +65,9 @@ export function Auth() {
     return (
       <div className="min-h-svh flex items-center justify-center bg-rose-50/40 px-4">
         <div className="max-w-sm text-center space-y-2">
-          <HeartPulse size={32} className="text-rose-400 mx-auto" />
+          <Blob size={56} className="mx-auto">
+            <HeartPulse size={26} />
+          </Blob>
           <h1 className="text-lg font-semibold text-slate-800">Check your email</h1>
           <p className="text-sm text-slate-500">
             We sent a confirmation link to <strong>{signUpForm.email}</strong>. Confirm it, then sign in below.
@@ -86,7 +91,9 @@ export function Auth() {
     <div className="min-h-svh flex items-center justify-center bg-rose-50/40 px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <HeartPulse size={32} className="text-rose-400 mx-auto mb-2" />
+          <Blob size={56} className="mx-auto mb-2">
+            <HeartPulse size={26} />
+          </Blob>
           <h1 className="text-xl font-semibold text-slate-800">Pregg</h1>
           <p className="text-sm text-slate-400">Your pregnancy, tracked and always with you.</p>
         </div>

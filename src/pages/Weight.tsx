@@ -91,7 +91,7 @@ export function Weight() {
 
       <section className="rounded-xl border border-rose-100 bg-white p-4">
         <h2 className="text-sm font-medium text-slate-500 mb-3">Trend</h2>
-        <TrendChart data={chartData} series={[{ key: 'weight', label: `Weight (${settings.weightUnit})`, color: '#ec4a7a' }]} unit={settings.weightUnit} />
+        <TrendChart data={chartData} series={[{ key: 'weight', label: `Weight (${settings.weightUnit})`, color: '#7c4a68' }]} unit={settings.weightUnit} />
       </section>
 
       <section>

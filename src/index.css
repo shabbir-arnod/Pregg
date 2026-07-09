@@ -2,6 +2,25 @@
 
 @theme {
   --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* Blush + plum duotone restyle — see Design/design_handoff_flo_restyle */
+  --color-rose-50: #fdf3f6;
+  --color-rose-100: #f9e6ec;
+  --color-rose-200: #f3dbe3;
+  --color-rose-300: #e8c2d0;
+  --color-rose-400: #c46b8f;
+  --color-rose-500: #7c4a68;
+  --color-rose-600: #63384f;
+
+  --color-slate-50: #fdf8fa;
+  --color-slate-100: #f7eef1;
+  --color-slate-200: #ecd9e0;
+  --color-slate-300: #d9b8c4;
+  --color-slate-400: #a67e8f;
+  --color-slate-500: #8a6373;
+  --color-slate-600: #6b4a5a;
+  --color-slate-700: #523844;
+  --color-slate-800: #3d2733;
 }
 
 :root {

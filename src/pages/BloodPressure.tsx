@@ -83,7 +83,7 @@ export function BloodPressure() {
         <TrendChart
           data={chartData}
           series={[
-            { key: 'systolic', label: 'Systolic', color: '#ec4a7a' },
+            { key: 'systolic', label: 'Systolic', color: '#7c4a68' },
             { key: 'diastolic', label: 'Diastolic', color: '#8b5cf6' },
           ]}
         />

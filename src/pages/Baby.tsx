@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseISO } from 'date-fns';
 import { Activity, Baby as BabyIcon, Camera, CalendarHeart, ImagePlus, Smile, Square, Trash2 } from 'lucide-react';
 import { useBumpPhotos, useKickSessions, useSettings, useSymptomLogs, type BumpPhotoWithUrl } from '../hooks/useAppData';
+import { Blob } from '../components/Blob';
 import { Modal } from '../components/Modal';
 import { formatDisplayDate, todayISO } from '../lib/date';
 import { getBabyEmoji, getBabySize, getDaysUntilDue, getPregnancyWeek, getTrimester, SYMPTOM_LABELS } from '../lib/pregnancy';
@@ -68,12 +69,12 @@ function DueDateSection() {
   return (
     <section className="rounded-xl border border-rose-100 bg-white p-5">
       <div className="flex items-center justify-center gap-4 mb-4">
-        <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center">
-          <BabyIcon size={40} className="text-rose-400" />
-        </div>
-        <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center text-4xl">
+        <Blob size={80}>
+          <BabyIcon size={40} />
+        </Blob>
+        <Blob size={80} gradient={false}>
           {getBabyEmoji(week)}
-        </div>
+        </Blob>
       </div>
       <div className="flex items-start justify-between">
         <div>
