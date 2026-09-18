@@ -111,6 +111,18 @@ function SymptomsSection() {
   const [selected, setSelected] = useState<SymptomKey[]>(todayLog?.symptoms ?? []);
   const [notes, setNotes] = useState(todayLog?.notes ?? '');
   const [saved, setSaved] = useState(false);
+  const hasSyncedTodayLog = useRef(false);
+
+  // todayLog loads asynchronously (Supabase fetch), so the useState
+  // initializers above usually run before it's available. Apply it once it
+  // arrives, but only the first time, so it doesn't clobber in-progress edits.
+  useEffect(() => {
+    if (todayLog && !hasSyncedTodayLog.current) {
+      setSelected(todayLog.symptoms);
+      setNotes(todayLog.notes ?? '');
+      hasSyncedTodayLog.current = true;
+    }
+  }, [todayLog]);
 
   function toggle(key: SymptomKey) {
     setSaved(false);
